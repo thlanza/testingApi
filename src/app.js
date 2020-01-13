@@ -2,18 +2,21 @@ const app = require("express")();
 const consign = require("consign");
 const knex = require("knex");
 const knexfile = require("../knexfile");
-// const knekLogger = require("knex-logger");
 
 //TODO criar chaveamento dinâmico
 app.db = knex(knexfile.test);
 
-// app.use(knekLogger(app.db));
+app.get("/users", (req, res, next) => {
+  console.log("Passei aqui");
+  next();
+});
 
 consign({ cwd: "src", verbose: false })
-  .include("./config/middlewares.js")
+  .include("./config/passport.js")
+  .then("./config/middlewares.js")
   .then("./services")
   .then("./routes")
-  .then("./config/routes.js")
+  .then("./config/router.js")
   .into(app);
 
 // app.db
@@ -30,6 +33,14 @@ consign({ cwd: "src", verbose: false })
 
 app.get("/", (req, res) => {
   res.status(200).send();
+});
+
+app.use((err, req, res, next) => {
+  const { name, message } = err;
+  if (name === "ValidationError") res.status(400).json({ error: message });
+  if (name === "RecursoIndevidoError") res.status(403).json({ error: message });
+  else res.status(500).json({ name, message, stack });
+  next(err);
 });
 
 module.exports = app;
